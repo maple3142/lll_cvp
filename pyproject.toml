@@ -2,7 +2,7 @@
 name = "lll_cvp"
 version = "0.0.1"
 dependencies = [
-    "sagemath-standard >= 10.0",
+    # "sagemath-standard >= 10.0",
 ]
 
 [build-system]
