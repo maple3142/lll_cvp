@@ -33,12 +33,12 @@ def build_lattice(mat, lb, ub):
 
 def LLL(M):
     logger.debug(f"LLL reduction on matrix of size {M.nrows()}x{M.ncols()}")
-    return M.LLL()
+    return M.dense_matrix().LLL()
 
 
 def BKZ(M):
     logger.debug(f"BKZ reduction on matrix of size {M.nrows()}x{M.ncols()}")
-    return M.BKZ()
+    return M.dense_matrix().BKZ()
 
 
 def flatter(M):
@@ -107,14 +107,7 @@ def kannan_cvp(mat, target, reduction=reduction, weight=None):
     :param target: a vector
     :returns: a solution as a vector
     """
-    if weight is None:
-        weight = max(target)
-    L = block_matrix([[mat, 0], [-matrix(target), weight]])
-    for row in reduction(L):
-        if row[-1] < 0:
-            row = -row
-        if row[-1] == weight:
-            return row[:-1] + target
+    return kannan_cvp_ex(mat, target, reduction, weight)[0][0]
 
 
 def kannan_cvp_ex(mat, target, reduction=reduction, weight=None):
@@ -128,7 +121,9 @@ def kannan_cvp_ex(mat, target, reduction=reduction, weight=None):
     # still kannan cvp, but return all possible solutions
     # along with a reduced basis (useful for cvp enumeration)
     if weight is None:
-        weight = max(target)
+        mat = reduction(mat)
+        weight = mat[-1].norm().round() + 1
+        # another reasonable choice is `weight = max(target)` based on my experience
     L = block_matrix([[mat, 0], [-matrix(target), weight]])
     cvps = []
     basis = []
