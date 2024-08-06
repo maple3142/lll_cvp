@@ -1,8 +1,33 @@
 from lll_cvp import *
 from functools import partial
+from functools import wraps
+
+is_in_example = False
 
 
+def example(fn):
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        global is_in_example
+        if not is_in_example:
+            print("=" * 40)
+            print(f"Running {fn.__name__!r}")
+            print(fn.__doc__)
+            print("=" * 40)
+        is_in_example = True
+        fn(*args, **kwargs)
+        is_in_example = False
+        if not is_in_example:
+            print()
+
+    return wrapped
+
+
+@example
 def example1():
+    """
+    HITCON CTF 2019 Quals not so hard RSA
+    """
     # copied from https://github.com/rkm0959/Inequality_Solving_with_CVP/blob/main/Example%20Challenge%204%20-%20HITCON%20CTF%202019%20Quals%20-%20not%20so%20hard%20RSA/solve_challenge_4.sage
     ## Example 4 : HITCON CTF 2019 Quals not so hard RSA
 
@@ -103,7 +128,11 @@ def example1():
     print((int)(ptxt).to_bytes(128, byteorder="big"))
 
 
+@example
 def example2():
+    """
+    ACSC Share The Flag
+    """
     # modified from https://github.com/rkm0959/Inequality_Solving_with_CVP/blob/main/Example%20Challenge%207%20-%20ACSC%20Share%20The%20Flag/solve_challenge_7.py
     p = 251
     X = bytes.fromhex("02d4623be12c8f01cb2ebe5f837c1d")
@@ -222,7 +251,11 @@ def example2():
     # ACSC{wOAdvfst41xJzG6r}
 
 
+@example
 def example3():
+    """
+    PBCTF 2021 - seed me
+    """
     # modified from https://blog.maple3142.net/2021/10/11/pbctf-2021-writeups/#seed-me
     from operator import xor
 
@@ -282,7 +315,11 @@ def example3():
     # known good seed: 272404351039795
 
 
+@example
 def example4():
+    """
+    Simple example of underconstrained equations
+    """
     n = 10
     pub1 = random_vector(ZZ, n, x=1, y=2**256)
     pub2 = random_vector(ZZ, n, x=1, y=2**256)
@@ -297,7 +334,11 @@ def example4():
     print(secret)
 
 
+@example
 def example5(cvp=kannan_cvp):
+    """
+    ImaginaryCTF Round 30 - Easy DSA: LCG
+    """
     # https://github.com/maple3142/My-CTF-Challenges/tree/master/ImaginaryCTF/Round%2030/Easy%20DSA:%20LCG
     from fastecdsa.curve import secp256k1
     from hashlib import sha256
@@ -352,7 +393,11 @@ def example5(cvp=kannan_cvp):
     print(cipher.decrypt(ct))
 
 
+@example
 def example6():
+    """
+    Simple example of underconstrained equations (non-linear equations)
+    """
     n = ZZ(getrandbits(2048))
     roots = [ZZ(getrandbits(128)) for _ in range(3)]
     x, y, z = PolynomialRing(ZZ, ["x", "y", "z"]).gens()
@@ -379,7 +424,11 @@ def example6():
             print(roots)
 
 
+@example
 def example7():
+    """
+    TSJ CTF 2022 - Signature
+    """
     # https://github.com/maple3142/My-CTF-Challenges/blob/master/TSJ%20CTF%202022/Signature/README.md
     from fastecdsa.curve import secp256k1 as CURVE
     from Crypto.Cipher import AES
@@ -453,7 +502,11 @@ def example7():
     print(cipher.decrypt(msgct))
 
 
+@example
 def example_flatter():
+    """
+    Example 5 but explicitly using flatter reduction
+    """
     example5(cvp=partial(kannan_cvp, reduction=flatter))
 
 
