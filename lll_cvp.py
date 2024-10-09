@@ -6,6 +6,7 @@ from sage.all import (
     Sequence,
     ZZ,
     diagonal_matrix,
+    Zmod,
 )
 from subprocess import check_output
 from re import findall
@@ -339,6 +340,25 @@ def find_ortho(mod=None, *vecs, reduction=reduction):
     return matrix(ret)
 
 
+def reduce_mod_p(M, p, reduction=reduction):
+    """
+    Find a short basis for the lattice M modulo p
+    p should be a prime number as  it need to compute echelon_form
+
+    :param M: a matrix, should be able to change ring to Zmod(p)
+    :param p: a prime number
+    :returns: a matrix, a short basis for the lattice M modulo p
+    """
+    nr, nc = M.dimensions()
+    if nc < nr:
+        raise ValueError("number of columns most not be less than number of rows")
+    Me = M.change_ring(Zmod(p)).echelon_form()
+    L = Me.change_ring(ZZ).stack(
+        matrix.zero(nc - nr, nr).augment(matrix.identity(nc - nr) * p)
+    )
+    return reduction(L)
+
+
 __all__ = [
     "build_lattice",
     "LLL",
@@ -357,4 +377,5 @@ __all__ = [
     "solve_underconstrained_equations_general",
     "enum_ilp",
     "find_ortho",
+    "reduce_mod_p",
 ]

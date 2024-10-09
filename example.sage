@@ -580,6 +580,34 @@ def example9():
 
 
 @example
+def example10():
+    """
+    LWE primal attack
+    """
+    q = 2**255 - 19
+    n = 32
+    m = 64
+    e_bound = 10
+
+    A = random_matrix(GF(q), m, n)
+    s = random_vector(GF(q), n)
+    e = vector(GF(q), [randint(-e_bound, e_bound) for _ in range(m)])
+    b = (A * s + e).change_ring(ZZ)
+
+    # LWE primal attack
+    ATR = reduce_mod_p(A.T, q)
+    s_rec = A.solve_right(kannan_cvp(ATR, b))
+    print(s_rec)
+    assert s_rec == s
+
+    # Reduce it later also works
+    ATR = reduce_mod_p(A.T, q, reduction=lambda x: x)
+    s_rec = A.solve_right(kannan_cvp(ATR, b))
+    print(s_rec)
+    assert s_rec == s
+
+
+@example
 def example_flatter():
     """
     Example 5 but explicitly using flatter reduction
@@ -591,13 +619,14 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG)
-    example1()
-    example2()
-    example3()
-    example4()
-    example5()
-    example6()
-    example7()
-    example8()
-    example9()
-    example_flatter()
+    # example1()
+    # example2()
+    # example3()
+    # example4()
+    # example5()
+    # example6()
+    # example7()
+    # example8()
+    # example9()
+    example10()
+    # example_flatter()
