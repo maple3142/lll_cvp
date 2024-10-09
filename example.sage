@@ -1,6 +1,5 @@
 from lll_cvp import *
-from functools import partial
-from functools import wraps
+from functools import partial, wraps
 
 is_in_example = False
 
@@ -503,6 +502,44 @@ def example7():
 
 
 @example
+def example8():
+    """
+    SEETF 2023 - onelinecrypto
+    assert __import__('re').fulmatch(r'SEE{\w{23}}',flag:=input()) and not int.from_bytes(flag.encode(),'big')%13**37
+    """
+    from Crypto.Util.number import bytes_to_long
+    import re
+
+    N = 23
+    C = int.from_bytes(b"SEE{" + b"\x00" * N + b"}", "big")
+    L = matrix.zero(N + 1, N + 1)
+    L[0, 0] = 13**37
+    for i in range(1, N + 1):
+        L[i, 0] = 256**i
+        L[i, i] = 1
+
+    lb = vector([-C] + [ord("0")] * N)
+    ub = vector([-C] + [ord("z")] * N)
+    sols, basis = solve_inequality_ex(L, lb, ub)
+    s0 = sols[0]
+    not_flag = b"SEE{" + bytes(s0[1:][::-1]) + b"}"
+    print(s0, not_flag)
+    assert bytes_to_long(not_flag) % (13**37) == 0
+
+    for sol in enum_ilp(sols[0], basis, lb, ub):
+        val = bytes(sol[1:][::-1])
+        flag = b"SEE{" + val + b"}"
+        print(flag)
+        assert bytes_to_long(flag) % (13**37) == 0
+        try:
+            if re.fullmatch(r"SEE{\w{23}}", flag.decode()):
+                print("FOUND")
+                break
+        except UnicodeDecodeError:
+            pass
+
+
+@example
 def example_flatter():
     """
     Example 5 but explicitly using flatter reduction
@@ -514,11 +551,12 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG)
-    example1()
-    example2()
-    example3()
-    example4()
-    example5()
-    example6()
-    example7()
-    example_flatter()
+    # example1()
+    # example2()
+    # example3()
+    # example4()
+    # example5()
+    # example6()
+    # example7()
+    # example_flatter()
+    example8()

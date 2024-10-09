@@ -263,6 +263,59 @@ def solve_underconstrained_equations_general(n, eqs, bounds, reduction=reduction
             yield vector(monos), sol
 
 
+def enum_ilp(base, basis, lb, ub, *, lp=10):
+    """
+    Enumerate solutions v = base + x @ basis, where lb <= v <= ub using ILP
+    powered by CPMPy + ORTools (pip install cpmpy ortools)
+
+    :param base: the base vector, can be None
+    :param basis: the basis matrix, should be a reduced basis
+    :param lb: the lower bound vector
+    :param ub: the upper bound vector
+    :param lp: MILP search limit from [-lp, lp], default 10
+    """
+    from cpmpy import cpm_array, intvar, Model, SolverLookup
+    from cpmpy.solvers.ortools import OrtSolutionPrinter
+    from ortools.sat.python import cp_model as ort
+    import multiprocessing as mp
+    from multiprocessing.synchronize import Event as EventClass
+
+    if base is None:
+        base = vector([0] * basis.ncols())
+
+    tgt = intvar(-lp, lp, int(basis.nrows())) @ cpm_array(basis)
+    model = Model([tgt >= cpm_array(lb - base), tgt <= cpm_array(ub - base)])
+
+    solver = SolverLookup.get("ortools", model)
+
+    q = mp.Queue()
+    search = mp.Event()
+
+    def do_solve(model: Model, qu: mp.Queue, search: EventClass):
+        def display():
+            qu.put(tgt.value().tolist())
+            # do not search until it is instructed to do so
+            search.wait()
+            search.clear()
+
+        solver = SolverLookup.get("ortools", model)
+        cb = OrtSolutionPrinter(solver, display=display)
+        slvr = ort.CpSolver()
+        slvr.parameters.enumerate_all_solutions = True
+        slvr.Solve(solver.ort_model, cb)
+
+    proc = mp.Process(target=do_solve, args=(model, q, search))
+    proc.start()
+
+    try:
+        while True:
+            yield base + vector(q.get())
+            search.set()
+    finally:
+        proc.kill()
+        proc.join()
+
+
 __all__ = [
     "build_lattice",
     "LLL",
@@ -274,8 +327,10 @@ __all__ = [
     "kannan_cvp",
     "kannan_cvp_ex",
     "solve_inequality",
+    "solve_inequality_ex",
     "solve_underconstrained_equations",
     "solve_multi_modulo_equations",
     "polynomials_to_matrix",
     "solve_underconstrained_equations_general",
+    "enum_ilp",
 ]
