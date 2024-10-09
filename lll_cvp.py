@@ -316,6 +316,29 @@ def enum_ilp(base, basis, lb, ub, *, lp=10):
         proc.join()
 
 
+def find_ortho(mod=None, *vecs, reduction=reduction):
+    """
+    Find an short orthogonal basis to the given vectors
+
+    :param mod: the modulus, can be None if the system is over ZZ
+    :param vecs: a list of vectors
+    :returns: a matrix, each row is orthogonal to the input vectors
+    """
+    assert len(set(len(v) for v in vecs)) == 1, "vectors have different lengths"
+    base = [[matrix(vecs).T, matrix.identity(len(vecs[0]))]]
+    if mod is not None:
+        base += [[ZZ(mod), 0]]
+    L = block_matrix(ZZ, base)
+    nv = len(vecs)
+    L[:, :nv] *= mod if mod is not None else max([max(v) for v in vecs]) * 2**10
+    L = reduction(L)
+    ret = []
+    for row in L:
+        if row[:nv] == 0:
+            ret.append(row[nv:])
+    return matrix(ret)
+
+
 __all__ = [
     "build_lattice",
     "LLL",
@@ -333,4 +356,5 @@ __all__ = [
     "polynomials_to_matrix",
     "solve_underconstrained_equations_general",
     "enum_ilp",
+    "find_ortho",
 ]

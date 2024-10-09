@@ -540,6 +540,46 @@ def example8():
 
 
 @example
+def example9():
+    """
+    Hidden Subset Sum Problem (https://eprint.iacr.org/2020/461.pdf)
+    """
+
+    p = 2**255 - 19
+    n, m = 16, 64
+
+    def gen_instance(p, n, m):
+        alpha = random_vector(GF(p), n)
+        X = random_matrix(GF(2), m, n).change_ring(ZZ).change_ring(GF(p))
+        h = X * alpha
+        return h, X, alpha
+
+    h, X, alpha = gen_instance(p, n, m)
+
+    # orthogonal lattice attack
+    ortho = find_ortho(p, h)
+    ortho2 = find_ortho(None, *ortho[: m - n])
+    print(ortho2)
+    assert ortho2.dimensions() == (n, m)
+    # the entries of ortho2 are -1,0,1, but we want 0,1
+    # so we can apply ilp based enumeration to solve it
+    lb = vector([0] * m)
+    ub = vector([1] * m)
+    collect = []
+    for sol in enum_ilp(None, ortho2, lb, ub):
+        if sol == 0:
+            continue
+        collect.append(sol)
+        if len(collect) >= ortho2.nrows():
+            break
+    X2 = matrix(collect).T  # X2.T and X.T are equivalent up to rows being permuted
+    print(X2.T)
+    assert X.T.is_permutation_of(X2.T)
+    # so we can't guarantee the order the recovered alpha, but its sum is correct
+    assert set(X2.solve_right(h)) == set(alpha)
+
+
+@example
 def example_flatter():
     """
     Example 5 but explicitly using flatter reduction
@@ -551,12 +591,13 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG)
-    # example1()
-    # example2()
-    # example3()
-    # example4()
-    # example5()
-    # example6()
-    # example7()
-    # example_flatter()
+    example1()
+    example2()
+    example3()
+    example4()
+    example5()
+    example6()
+    example7()
     example8()
+    example9()
+    example_flatter()
