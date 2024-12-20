@@ -7,6 +7,7 @@ from sage.all import (
     ZZ,
     diagonal_matrix,
     Zmod,
+    pari,
 )
 from subprocess import check_output
 from re import findall
@@ -42,6 +43,11 @@ def BKZ(M):
     return M.dense_matrix().BKZ()
 
 
+def pari_qflll(M):
+    pm = pari(M.T)
+    return (pm * pm.qflll()).sage().T
+
+
 def flatter(M):
     logger.debug(f"flatter reduction on matrix of size {M.nrows()}x{M.ncols()}")
     # compile https://github.com/keeganryan/flatter and put it in $PATH
@@ -62,6 +68,9 @@ def auto_reduction(M):
 
     :param M: a matrix
     """
+    if pari.version() >= (2, 17, 0):
+        # pari implements flatter since 2.17
+        return pari_qflll(M)
     if not has_flatter:
         return LLL(M)
     if max(M.dimensions()) < 32:
