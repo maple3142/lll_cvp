@@ -73,13 +73,14 @@ def auto_reduction(M):
         return pari_qflll(M)
     if not has_flatter:
         return LLL(M)
-    if max(M.dimensions()) < 32:
+    nr, nc = M.dimensions()
+    mx = abs(max(M.list()))
+    if max(nr, nc) < 32 and int(mx).bit_length() < 4096:
         # prefer LLL for small matrices
         return LLL(M)
-    if M.is_square():
+    # flatter only works in linear indepedent case
+    if M.is_square() and M.rank() == nc:
         return flatter(M)
-    # flatter also works in linear depedent case
-    nr, nc = M.dimensions()
     if nr > nc:
         # definitely not linearly independent
         return LLL(M)
