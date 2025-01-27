@@ -412,15 +412,20 @@ def example6():
         y: 2**128,
         z: 2**128,
     }
-    for monos, sol in solve_underconstrained_equations_general(n, eqs, bounds):
-        print(monos, sol)
-        if sol[-1] < 0:
-            sol = -sol
-        if sol[-1] == 1:
-            polys = [f.change_ring(QQ) for f in sol - monos if f]
-            I = ideal(polys)
-            print(I.variety())
-            print(roots)
+    for solve in (
+        solve_underconstrained_equations_general,
+        solve_underconstrained_equations_general_v2,
+    ):
+        print(f"solving with {solve.__name__}")
+        for monos, sol in solve(n, eqs, bounds):
+            print(monos, sol)
+            if sol[-1] < 0:
+                sol = -sol
+            if sol[-1] == 1:
+                polys = [f.change_ring(QQ) for f in sol - monos if f]
+                I = ideal(polys)
+                print(I.variety())
+                print(roots)
 
 
 @example
@@ -608,6 +613,46 @@ def example10():
 
 
 @example
+def example11():
+    """
+    ECDSA biased nonce
+    """
+    from fastecdsa.curve import secp256k1
+    from fastecdsa.keys import gen_keypair
+    from secrets import randbelow
+
+    q = secp256k1.q
+    G = secp256k1.G
+
+    def sign(d, z, k):
+        r = (k * G).x
+        s = (z + r * d) * pow(k, -1, q) % q
+        return r, s
+
+    d, Y = gen_keypair(secp256k1)
+    zs = [1, 2, 3]
+    B = 0x13371337133713371337133713371337 << 128
+    ks = [B + randbelow(1 << 128) for _ in zs]
+    sigs = [sign(d, z, int(k)) for z, k in zip(zs, ks)]
+    rs, ss = zip(*sigs)
+
+    def ecdsa_eq(d, z, r, s, k):
+        return s * k - z - r * d
+
+    ds, k0, k1, k2 = polygens(Zmod(q), ("d", "k0", "k1", "k2"))
+    eq0 = ecdsa_eq(ds, zs[0], rs[0], ss[0], k0)
+    eq1 = ecdsa_eq(ds, zs[1], rs[1], ss[1], k1)
+    eq2 = ecdsa_eq(ds, zs[2], rs[2], ss[2], k2)
+    eqs = [eq0, eq1, eq2]
+    sb = (B, B + 2**128)
+    bounds = {ds: q, k0: sb, k1: sb, k2: sb}
+    for monos, sol in solve_underconstrained_equations_general_v2(q, eqs, bounds):
+        sol_dict = dict(zip(monos, sol))
+        assert sol_dict[ds] % q == d
+        print("found", sol_dict[ds] % q)
+
+
+@example
 def example_flatter():
     """
     Example 5 but explicitly using flatter reduction
@@ -629,4 +674,5 @@ if __name__ == "__main__":
     example8()
     example9()
     example10()
-    # example_flatter()
+    example11()
+    example_flatter()

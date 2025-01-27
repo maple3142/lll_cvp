@@ -273,6 +273,71 @@ def solve_underconstrained_equations_general(n, eqs, bounds, reduction=reduction
             yield vector(monos), sol
 
 
+def interval_mult(it1, it2):
+    l1, u1 = it1
+    l2, u2 = it2
+    l = [l1 * l2, l1 * u2, u1 * l2, u1 * u2]
+    l.sort()
+    return l[0], l[3]
+
+
+def interval_pow(it, e):
+    l, u = it
+    return l**e, u**e
+
+
+def compute_mono_bounds(mono, bounds):
+    # compute upper and lower bounds of a monomial using interval arithmetic
+    vs = mono.parent().gens()
+    exps = mono.exponents(as_ETuples=False)[0]
+    ret = (1, 1)
+    for v, e in zip(vs, exps):
+        if e > 0:
+            ret = interval_mult(ret, interval_pow(bounds[v], e))
+    return ret
+
+
+def solve_underconstrained_equations_general_v2(
+    n, eqs, bounds, cvp_ex=kannan_cvp_ex, mode="default"
+):
+    """
+    Solve an underconstrained polynomial system over Z/nZ (or ZZ if n is None) where the unknown variables are bounded by some bounds
+    This version can possibly achieve better bounds when unbalanced bounds are given
+    However, the vectors it returns might not be as good as before due to its use of kannan cvp
+    So custom enumeration might be needed
+
+    :param n: the modulus, can be None if the system is over ZZ
+    :param eqs: a list of equations over ZZ
+    :param bounds: a dict mapping variable x to a tuple of (lower bound, upper bound), can be a single integer W to mean (-W, W)
+    :returns: a generator of solutions where each solution is a pair of (monomials, solution) if mode is "default"
+              a tuple of (monomials, cvps, basis) if mode is "raw"
+    """
+    M, monos = polynomials_to_matrix(eqs)
+    if n is None:
+        L = block_matrix(ZZ, [[M.T, 1]])
+    else:
+        L = block_matrix(ZZ, [[n, 0], [M.T, 1]])
+    bounds = {
+        x: tuple(w) if isinstance(w, (list, tuple)) else (-w, w)
+        for x, w in bounds.items()
+    }
+    mono_bounds = [compute_mono_bounds(m, bounds) for m in monos.list()]
+    monos_lb, monos_ub = zip(*mono_bounds)
+    lb = [0] * len(eqs) + list(monos_lb)
+    ub = [0] * len(eqs) + list(monos_ub)
+    cvps, basis = solve_inequality_ex(L, lb, ub, cvp_ex=cvp_ex)
+    if mode == "raw":
+        return monos, cvps, basis
+    zeros = [b[len(eqs) :] for b in basis if b[: len(eqs)] == 0]
+    for sol in cvps:
+        if sol[: len(eqs)] == 0:
+            yield vector(monos), sol[len(eqs) :]
+            for z in zeros:
+                # it is also possible to enumerate ... + ? * z
+                yield vector(monos), sol[len(eqs) :] + z
+                yield vector(monos), sol[len(eqs) :] - z
+
+
 def enum_ilp(base, basis, lb, ub, *, lp=10):
     """
     Enumerate solutions v = base + x @ basis, where lb <= v <= ub using ILP
@@ -384,6 +449,7 @@ __all__ = [
     "solve_multi_modulo_equations",
     "polynomials_to_matrix",
     "solve_underconstrained_equations_general",
+    "solve_underconstrained_equations_general_v2",
     "enum_ilp",
     "find_ortho",
     "reduce_mod_p",
