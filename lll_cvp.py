@@ -135,7 +135,7 @@ def kannan_cvp_ex(mat, target, reduction=reduction, weight=None):
         mat = reduction(mat)
         weight = mat[-1].norm().round() + 1
         # another reasonable choice is `weight = max(target)` based on my experience
-    L = block_matrix([[mat, 0], [-matrix(target), weight]])
+    L = block_matrix(ZZ, [[mat, 0], [-matrix(target), weight]])
     cvps = []
     basis = []
     for row in reduction(L):
