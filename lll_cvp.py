@@ -44,6 +44,7 @@ def BKZ(M):
 
 
 def pari_qflll(M):
+    logger.debug(f"pari.qflll reduction on matrix of size {M.nrows()}x{M.ncols()}")
     pm = pari(M.T)
     return (pm * pm.qflll()).sage().T
 
@@ -68,9 +69,6 @@ def auto_reduction(M):
 
     :param M: a matrix
     """
-    if pari.version() >= (2, 17, 0):
-        # pari implements flatter since 2.17
-        return pari_qflll(M)
     if not has_flatter:
         return LLL(M)
     nr, nc = M.dimensions()
