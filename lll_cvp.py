@@ -341,8 +341,8 @@ def solve_underconstrained_equations_general_v2(
 
 def enum_brute(base, basis, lb, ub, *, n=5):
     """
-    Enumerate solutions v = base + x @ basis, where lb <= v <= ub using ILP
-    powered by brute force, would try at most (2*n+1)^basis.nrows() solutions
+    Enumerate solutions v = base + x @ basis, where lb <= v <= ub using bruteforce
+    would try at most (2*n+1)^basis.nrows() solutions
 
     :param base: the base vector, can be None
     :param basis: the basis matrix, should be a reduced basis
@@ -469,6 +469,7 @@ __all__ = [
     "polynomials_to_matrix",
     "solve_underconstrained_equations_general",
     "solve_underconstrained_equations_general_v2",
+    "enum_brute",
     "enum_ilp",
     "find_ortho",
     "reduce_mod_p",
