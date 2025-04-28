@@ -1,17 +1,19 @@
-from sage.all import (
-    matrix,
-    vector,
-    matrix,
-    block_matrix,
-    Sequence,
-    ZZ,
-    diagonal_matrix,
-    Zmod,
-    pari,
-)
-from subprocess import check_output
+import itertools
+import logging
+import shutil
 from re import findall
-import shutil, logging, itertools
+from subprocess import check_output
+
+from sage.all import (
+    ZZ,
+    Sequence,
+    Zmod,
+    block_matrix,
+    diagonal_matrix,
+    matrix,
+    pari,
+    vector,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -350,7 +352,7 @@ def enum_brute(base, basis, lb, ub, *, n=5):
     """
     for muls in itertools.product(range(-n, n + 1), repeat=basis.nrows()):
         v = base + vector(muls) * basis
-        if all([l <= v[i] <= u for i, (l, u) in enumerate(zip(lb, ub))]):
+        if all([l <= x <= u for (l, x, u) in enumerate(zip(lb, v, ub))]):
             yield v
 
 
@@ -365,11 +367,12 @@ def enum_ilp(base, basis, lb, ub, *, lp=10):
     :param ub: the upper bound vector
     :param lp: MILP search limit from [-lp, lp], default 10
     """
-    from cpmpy import cpm_array, intvar, Model, SolverLookup
-    from cpmpy.solvers.ortools import OrtSolutionPrinter
-    from ortools.sat.python import cp_model as ort
     import multiprocessing as mp
     from multiprocessing.synchronize import Event as EventClass
+
+    from cpmpy import Model, SolverLookup, cpm_array, intvar
+    from cpmpy.solvers.ortools import OrtSolutionPrinter
+    from ortools.sat.python import cp_model as ort
 
     if base is None:
         base = vector([0] * basis.ncols())
