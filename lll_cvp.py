@@ -11,7 +11,7 @@ from sage.all import (
 )
 from subprocess import check_output
 from re import findall
-import shutil, logging
+import shutil, logging, itertools
 
 logger = logging.getLogger(__name__)
 
@@ -337,6 +337,23 @@ def solve_underconstrained_equations_general_v2(
                 yield vector(monos), sol[len(eqs) :] - z
 
 
+def enum_brute(base, basis, lb, ub, *, n=5):
+    """
+    Enumerate solutions v = base + x @ basis, where lb <= v <= ub using ILP
+    powered by brute force, would try at most (2*n+1)^basis.nrows() solutions
+
+    :param base: the base vector, can be None
+    :param basis: the basis matrix, should be a reduced basis
+    :param lb: the lower bound vector
+    :param ub: the upper bound vector
+    :param n: the search limit from [-n, n], default 5
+    """
+    for muls in itertools.product(range(-n, n + 1), repeat=basis.nrows()):
+        v = base + vector(muls) * basis
+        if all([l <= v[i] <= u for i, (l, u) in enumerate(zip(lb, ub))]):
+            yield v
+
+
 def enum_ilp(base, basis, lb, ub, *, lp=10):
     """
     Enumerate solutions v = base + x @ basis, where lb <= v <= ub using ILP
@@ -413,10 +430,10 @@ def find_ortho(mod=None, *vecs, reduction=reduction):
     return matrix(ret)
 
 
-def reduce_mod_p(M, p, reduction=reduction):
+def reduce_mod_p(M, p, reduction=reduction, is_field=False):
     """
     Find a short basis for the lattice M modulo p
-    p should be a prime number as  it need to compute echelon_form
+    p should be a prime number as it need to compute echelon_form
 
     :param M: a matrix, should be able to change ring to Zmod(p)
     :param p: a prime number
@@ -425,7 +442,7 @@ def reduce_mod_p(M, p, reduction=reduction):
     nr, nc = M.dimensions()
     if nc < nr:
         raise ValueError("number of columns most not be less than number of rows")
-    Me = M.change_ring(Zmod(p)).echelon_form()
+    Me = M.change_ring(Zmod(p, is_field=is_field)).echelon_form()
     L = Me.change_ring(ZZ).stack(
         matrix.zero(nc - nr, nr).augment(matrix.identity(nc - nr) * p)
     )
