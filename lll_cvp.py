@@ -1,3 +1,5 @@
+import contextlib
+import contextvars
 import itertools
 import logging
 import shutil
@@ -89,16 +91,27 @@ def auto_reduction(M):
     return flatter(M)
 
 
-default_reduction = auto_reduction
+_ctx_reduction = contextvars.ContextVar("reduction", default=auto_reduction)
 
 
-def set_default_reduction(reduction):
-    global default_reduction
-    default_reduction = reduction
+@contextlib.contextmanager
+def lattice_context(*, reduction=auto_reduction):
+    """
+    Set the reduction function for the context
+    :param reduction: a function that takes a lattice basis matrix and returns a reduced basis matrix
+    """
+    token = _ctx_reduction.set(reduction)
+    try:
+        yield
+    finally:
+        _ctx_reduction.reset(token)
 
 
 def reduction(M):
-    return default_reduction(M)
+    """
+    Perform lattice reduction using the reduction function in the context
+    """
+    return _ctx_reduction.get()(M)
 
 
 def babai_cvp(mat, target, reduction=reduction):
@@ -458,7 +471,7 @@ __all__ = [
     "BKZ",
     "flatter",
     "auto_reduction",
-    "set_default_reduction",
+    "lattice_context",
     "babai_cvp",
     "kannan_cvp",
     "kannan_cvp_ex",
