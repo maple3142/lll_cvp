@@ -94,24 +94,16 @@ def auto_reduction(M):
 _ctx_reduction = contextvars.ContextVar("reduction", default=auto_reduction)
 
 
-@contextlib.contextmanager
-def lattice_context(*, reduction=auto_reduction):
-    """
-    Set the reduction function for the context
-    :param reduction: a function that takes a lattice basis matrix and returns a reduced basis matrix
-    """
-    token = _ctx_reduction.set(reduction)
-    try:
-        yield
-    finally:
-        _ctx_reduction.reset(token)
-
-
 def reduction(M):
-    """
-    Perform lattice reduction using the reduction function in the context
-    """
     return _ctx_reduction.get()(M)
+
+
+def cvp(mat, target):
+    return _ctx_cvp.get()(mat, target)
+
+
+def cvp_ex(mat, target):
+    return _ctx_cvp_ex.get()(mat, target)
 
 
 def babai_cvp(mat, target, reduction=reduction):
@@ -132,6 +124,9 @@ def kannan_cvp(mat, target, reduction=reduction, weight=None):
     :returns: a solution as a vector
     """
     return kannan_cvp_ex(mat, target, reduction, weight)[0][0]
+
+
+_ctx_cvp = contextvars.ContextVar("cvp", default=kannan_cvp)
 
 
 def kannan_cvp_ex(mat, target, reduction=reduction, weight=None):
@@ -161,7 +156,23 @@ def kannan_cvp_ex(mat, target, reduction=reduction, weight=None):
     return matrix(ZZ, cvps), matrix(ZZ, basis)
 
 
-def solve_inequality(M, lb, ub, cvp=kannan_cvp):
+_ctx_cvp_ex = contextvars.ContextVar("cvp_ex", default=kannan_cvp_ex)
+
+
+@contextlib.contextmanager
+def lattice_context(*, reduction=auto_reduction, cvp=kannan_cvp, cvp_ex=kannan_cvp_ex):
+    """
+    Set the reduction function for the context
+    :param reduction: a function that takes a lattice basis matrix and returns a reduced basis matrix
+    """
+    token = _ctx_reduction.set(reduction)
+    try:
+        yield
+    finally:
+        _ctx_reduction.reset(token)
+
+
+def solve_inequality(M, lb, ub, cvp=cvp):
     """
     Find an vector x such that x*M is bounded by lb and ub without checking for correctness
     note that the returned vector is x*M, not x
@@ -175,7 +186,7 @@ def solve_inequality(M, lb, ub, cvp=kannan_cvp):
     return Q.solve_left(cvp(L * Q, Q * target))
 
 
-def solve_inequality_ex(M, lb, ub, cvp_ex=kannan_cvp_ex):
+def solve_inequality_ex(M, lb, ub, cvp_ex=cvp_ex):
     """
     Find vectors x such that x*M is bounded by lb and ub without checking for correctness along with a reduced basis for enumeration
     note that the returned vector is x*M, not x
@@ -193,7 +204,7 @@ def solve_inequality_ex(M, lb, ub, cvp_ex=kannan_cvp_ex):
     return cvps, basis
 
 
-def solve_underconstrained_equations(M, target, lb, ub, cvp=kannan_cvp):
+def solve_underconstrained_equations(M, target, lb, ub, cvp=cvp):
     """
     Find an vector x such that x*M=target and x is bounded by lb and ub without checking for correctness
 
@@ -232,9 +243,7 @@ def polynomials_to_matrix(polys):
     return M, vector(monos)
 
 
-def solve_multi_modulo_equations(
-    eqs, mods, lb, ub, reduction=reduction, cvp=kannan_cvp
-):
+def solve_multi_modulo_equations(eqs, mods, lb, ub, reduction=reduction, cvp=cvp):
     """
     Solve a linear system of equations modulo different modulus
 
@@ -312,7 +321,7 @@ def compute_mono_bounds(mono, bounds):
 
 
 def solve_underconstrained_equations_general_v2(
-    n, eqs, bounds, cvp_ex=kannan_cvp_ex, mode="default"
+    n, eqs, bounds, cvp_ex=cvp_ex, mode="default"
 ):
     """
     Solve an underconstrained polynomial system over Z/nZ (or ZZ if n is None) where the unknown variables are bounded by some bounds
