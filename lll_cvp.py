@@ -372,6 +372,10 @@ def enum_brute(base, basis, lb, ub, *, n=5):
     :param ub: the upper bound vector
     :param n: the search limit from [-n, n], default 5
     """
+
+    if base is None:
+        base = vector([0] * basis.ncols())
+
     for muls in itertools.product(range(-n, n + 1), repeat=basis.nrows()):
         v = base + vector(muls) * basis
         if all([l <= x <= u for (l, x, u) in enumerate(zip(lb, v, ub))]):
