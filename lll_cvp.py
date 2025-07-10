@@ -361,24 +361,44 @@ def solve_underconstrained_equations_general_v2(
                 yield vector(monos), sol[len(eqs) :] - z
 
 
-def enum_brute(base, basis, lb, ub, *, n=5):
+def enum_brute(base, basis, lb=None, ub=None, *, n=5):
     """
     Enumerate solutions v = base + x @ basis, where lb <= v <= ub using bruteforce
     would try at most (2*n+1)^basis.nrows() solutions
 
     :param base: the base vector, can be None
     :param basis: the basis matrix, should be a reduced basis
-    :param lb: the lower bound vector
-    :param ub: the upper bound vector
+    :param lb: the lower bound vector, can be None
+    :param ub: the upper bound vector, can be None
     :param n: the search limit from [-n, n], default 5
     """
 
     if base is None:
         base = vector([0] * basis.ncols())
 
+    if lb and ub:
+
+        def check(v):
+            return all([l <= x <= u for (l, x, u) in zip(lb, v, ub)])
+
+    elif lb is not None:
+
+        def check(v):
+            return all([l <= x for (l, x) in zip(lb, v)])
+
+    elif ub is not None:
+
+        def check(v):
+            return all([x <= u for (x, u) in zip(v, ub)])
+
+    else:
+
+        def check(v):
+            return True
+
     for muls in itertools.product(range(-n, n + 1), repeat=basis.nrows()):
         v = base + vector(muls) * basis
-        if all([l <= x <= u for (l, x, u) in enumerate(zip(lb, v, ub))]):
+        if check(v):
             yield v
 
 
