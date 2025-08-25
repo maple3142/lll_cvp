@@ -505,7 +505,7 @@ def qary_lattice(M, q, *, is_field=False):
 
 def reduce_mod_p(M, p, *, reduction=reduction, is_field=False):
     """
-    Find a short basis for the lattice M modulo p
+    Find a short basis for the lattice M modulo p (reduced basis of p-ary lattice)
     p should be a prime number as it need to compute echelon_form
 
     :param M: a matrix with independent rows, should be able to change ring to Zmod(p)
