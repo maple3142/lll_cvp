@@ -510,7 +510,7 @@ def example7():
 def example8():
     """
     SEETF 2023 - onelinecrypto
-    assert __import__('re').fulmatch(r'SEE{\w{23}}',flag:=input()) and not int.from_bytes(flag.encode(),'big')%13**37
+    assert __import__('re').fulmatch(r'SEE{\\w{23}}',flag:=input()) and not int.from_bytes(flag.encode(),'big')%13**37
     """
     from Crypto.Util.number import bytes_to_long
     import re
@@ -600,14 +600,8 @@ def example10():
     b = (A * s + e).change_ring(ZZ)
 
     # LWE primal attack
-    ATR = reduce_mod_p(A.T, q)
-    s_rec = A.solve_right(kannan_cvp(ATR, b))
-    print(s_rec)
-    assert s_rec == s
-
-    # Reduce it later also works
-    ATR = reduce_mod_p(A.T, q, reduction=lambda x: x)
-    s_rec = A.solve_right(kannan_cvp(ATR, b))
+    lat = qary_lattice(A.T, q)
+    s_rec = A.solve_right(kannan_cvp(lat, b))
     print(s_rec)
     assert s_rec == s
 
