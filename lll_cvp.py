@@ -515,6 +515,19 @@ def reduce_mod_p(M, p, *, reduction=reduction, is_field=False):
     L = qary_lattice(M, p, is_field=is_field)
     return reduction(L)
 
+def affine_cvp(base, lat, target, *, cvp=kannan_cvp):
+    """
+    Find v = base + x @ lat that is close to the target using CVP techniques
+
+    :param base: the base vector
+    :param lat: the basis matrix
+    :param target: the target vector
+    :returns: the solution vector v
+    """
+    # v = base + x @ lat ~ target
+    # we want x @ lat ~ target - base
+    # so v = base + cvp(lat, target - base)
+    return base + cvp(lat, target - base)
 
 __all__ = [
     "build_lattice",
@@ -538,4 +551,5 @@ __all__ = [
     "find_ortho",
     "qary_lattice",
     "reduce_mod_p",
+    "affine_cvp",
 ]
