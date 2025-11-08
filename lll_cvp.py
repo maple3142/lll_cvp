@@ -76,7 +76,8 @@ def auto_reduction(M):
     if not has_flatter:
         return LLL(M)
     nr, nc = M.dimensions()
-    mx = abs(max(M.list()))
+    # use true maximum absolute entry to avoid underestimating size
+    mx = max(abs(int(x)) for x in M.list()) if M.list() else 0
     if max(nr, nc) < 32 and int(mx).bit_length() < 4096:
         # prefer LLL for small matrices
         return LLL(M)
@@ -311,12 +312,27 @@ def interval_pow(it, e):
 
 def compute_mono_bounds(mono, bounds):
     # compute upper and lower bounds of a monomial using interval arithmetic
+    # robust to Sage versions (no as_ETuples kwarg) and correct for even/odd exponents
     vs = mono.parent().gens()
-    exps = mono.exponents(as_ETuples=False)[0]
+    exps = mono.exponents()[0]
+
+    def pow_interval(it, e):
+        l, u = it
+        if e == 0:
+            return (1, 1)
+        if e % 2 == 1:
+            # odd power is monotone increasing
+            return (l**e, u**e)
+        # even power
+        l2, u2 = l**e, u**e
+        if l <= 0 <= u:
+            return (0, max(l2, u2))
+        return (min(l2, u2), max(l2, u2))
+
     ret = (1, 1)
     for v, e in zip(vs, exps):
         if e > 0:
-            ret = interval_mult(ret, interval_pow(bounds[v], e))
+            ret = interval_mult(ret, pow_interval(bounds[v], e))
     return ret
 
 
@@ -470,7 +486,12 @@ def find_ortho(mod=None, *vecs, reduction=reduction):
         base += [[ZZ(mod), 0]]
     L = block_matrix(ZZ, base)
     nv = len(vecs)
-    L[:, :nv] *= mod if mod is not None else max([max(v) for v in vecs]) * 2**10
+    if mod is not None:
+        scale = mod
+    else:
+        # use absolute maximum across all entries to avoid under-scaling for negative-only vectors
+        scale = max(1, max(max(abs(int(x)) for x in v) for v in vecs)) * 2**10
+    L[:, :nv] *= scale
     L = reduction(L)
     ret = []
     for row in L:
