@@ -77,7 +77,7 @@ def auto_reduction(M):
         return LLL(M)
     nr, nc = M.dimensions()
     # use true maximum absolute entry to avoid underestimating size
-    mx = max(abs(int(x)) for x in M.list()) if M.list() else 0
+    mx = max(abs(ZZ(x)) for x in M.list()) if M.list() else 0
     if max(nr, nc) < 32 and int(mx).bit_length() < 4096:
         # prefer LLL for small matrices
         return LLL(M)
@@ -307,7 +307,16 @@ def interval_mult(it1, it2):
 
 def interval_pow(it, e):
     l, u = it
-    return l**e, u**e
+    if e == 0:
+        return 1, 1
+    if e % 2 == 1:
+        # odd power is monotone increasing
+        return l**e, u**e
+    # even power
+    l2, u2 = l**e, u**e
+    if l <= 0 <= u:
+        return 0, max(l2, u2)
+    return min(l2, u2), max(l2, u2)
 
 
 def compute_mono_bounds(mono, bounds):
@@ -316,23 +325,10 @@ def compute_mono_bounds(mono, bounds):
     vs = mono.parent().gens()
     exps = mono.exponents()[0]
 
-    def pow_interval(it, e):
-        l, u = it
-        if e == 0:
-            return (1, 1)
-        if e % 2 == 1:
-            # odd power is monotone increasing
-            return (l**e, u**e)
-        # even power
-        l2, u2 = l**e, u**e
-        if l <= 0 <= u:
-            return (0, max(l2, u2))
-        return (min(l2, u2), max(l2, u2))
-
     ret = (1, 1)
     for v, e in zip(vs, exps):
         if e > 0:
-            ret = interval_mult(ret, pow_interval(bounds[v], e))
+            ret = interval_mult(ret, interval_pow(bounds[v], e))
     return ret
 
 
@@ -490,7 +486,7 @@ def find_ortho(mod=None, *vecs, reduction=reduction):
         scale = mod
     else:
         # use absolute maximum across all entries to avoid under-scaling for negative-only vectors
-        scale = max(1, max(max(abs(int(x)) for x in v) for v in vecs)) * 2**10
+        scale = max(1, max(max(abs(ZZ(x)) for x in v) for v in vecs)) * 2**10
     L[:, :nv] *= scale
     L = reduction(L)
     ret = []
@@ -536,6 +532,7 @@ def reduce_mod_p(M, p, *, reduction=reduction, is_field=False):
     L = qary_lattice(M, p, is_field=is_field)
     return reduction(L)
 
+
 def affine_cvp(base, lat, target, *, cvp=kannan_cvp):
     """
     Find v = base + x @ lat that is close to the target using CVP techniques
@@ -549,6 +546,7 @@ def affine_cvp(base, lat, target, *, cvp=kannan_cvp):
     # we want x @ lat ~ target - base
     # so v = base + cvp(lat, target - base)
     return base + cvp(lat, target - base)
+
 
 __all__ = [
     "build_lattice",
